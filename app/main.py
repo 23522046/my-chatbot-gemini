@@ -31,8 +31,15 @@ async def serve_ui(request: Request):
 
 @app.post("/populate_database")
 async def populate_db():
-    result = await populate_database()
-    return {"message": f"Populated {result} documents to the database."}
+    try:
+        async def event_generator():
+            async for msg in populate_database():
+                yield msg.encode("utf-8")
+
+        return StreamingResponse(event_generator(), media_type="text/plain")
+    except Exception as e:
+        print(f"Error in populate_database endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/query")
 async def query(request: QueryRequest):
